@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Parking {
+  id                 Int            @id @default(autoincrement())
+  code               String         @unique
+  name               String
+  location           String
+  availableSpaces    Int
+  chargingFeePerHour Float
+  createdAt          DateTime       @default(now())
+
+  spaces             ParkingSpace[]
+}
+
+model ParkingSpace {
+  id        Int      @id @default(autoincrement())
+  spaceCode String   @unique
+  parkingId Int
+  isReserved Boolean @default(false)
+
+  parking   Parking  @relation(fields: [parkingId], references: [id])
+  booking   Booking?
+  
+  carEntries   CarEntry[] 
+}
+
+model Booking {
+  id             Int      @id @default(autoincrement())
+  userId         String
+  parkingCode    String
+ parkingSpaceId Int?     @unique
+  platenumber    String
+  bookingTime    DateTime @default(now())
+  status         String   @default("reserved") // reserved, cancelled, completed
+
+  user           User          @relation(fields: [userId], references: [id])
+  parkingSpace   ParkingSpace?  @relation(fields: [parkingSpaceId], references: [id])
+
+  @@unique([platenumber, status])
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  role      Role     @default(DRIVER)
+  createdAt DateTime @default(now())
+
+  bookings Booking[]
+}
+
+model CarEntry {
+  id             Int       @id @default(autoincrement())
+  platenumber    String
+  parkingCode    String
+  parkingSpaceId Int?
+  entryDateTime  DateTime  @default(now())
+  exitDateTime   DateTime?
+  chargedAmount  Float     @default(0)
+
+  parkingSpace   ParkingSpace? @relation(fields: [parkingSpaceId], references: [id])
+
+  @@index([platenumber])
+}
+
+
+enum Role {
+  ADMIN
+  DRIVER
+}
+
